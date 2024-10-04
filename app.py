@@ -148,16 +148,4 @@ elif option == "Chatbot":
         chatgpt_response = response_json.get("result", "No response from ChatGPT.")
         st.write("ChatGPT: " + chatgpt_response)
 
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            if st.button("Telugu"):
-                telugu_response = translate_text(chatgpt_response, 'te')
-                st.write("Telugu: " + telugu_response)
-        with col2:
-            if st.button("Tamil"):
-                tamil_response = translate_text(chatgpt_response, 'ta')
-                st.write("Tamil: " + tamil_response)
-        with col3:
-            if st.button("Hindi"):
-                hindi_response = translate_text(chatgpt_response, 'hi')
-                st.write("Hindi: " + hindi_response)
+        
