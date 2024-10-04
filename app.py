@@ -8,7 +8,7 @@ from googletrans import Translator
 import json
 import pyttsx3
 from PIL import Image
-import pytesseract  # Make sure to install pytesseract
+import pytesseract  # You may need to install pytesseract and the Tesseract-OCR executable
 
 # Set up the translator and text-to-speech engine
 translator = Translator()
@@ -29,7 +29,7 @@ def extract_video_id(link):
     try:
         if not link or "v=" not in link:
             return None
-        video_id = link.split("v=")[1].split("&")[0]  # Handle extra params
+        video_id = link.split("v=")[1]
         return video_id if video_id else None
     except Exception as e:
         print(f"Error extracting video ID: {str(e)}")
@@ -59,7 +59,7 @@ def generate_pdf(summary_text):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
-    pdf.cell(200, 10, txt="Summary", ln=True, align="C")
+    pdf.cell(200, 10, txt="YouTube Video Summary", ln=True, align="C")
     pdf.multi_cell(0, 10, summary_text)
     pdf_file = "summary.pdf"
     pdf.output(pdf_file)
@@ -75,7 +75,7 @@ def speak_text(text):
 def chunk_text(text, max_length=1024):
     words = text.split()
     for i in range(0, len(words), max_length):
-        yield ' '.join(words[i:i + max_length])
+        yield ' '.join(words[i:i+max_length])
 
 # Function to check for violations in a message
 def check_for_violations(message):
@@ -84,10 +84,10 @@ def check_for_violations(message):
             return violation
     return None
 
-# Function to extract text from image
-def extract_text_from_image(image):
-    text = pytesseract.image_to_string(image)
-    return text
+# Function to convert image to text
+def image_to_text(image):
+    # Using pytesseract to extract text from the image
+    return pytesseract.image_to_string(image)
 
 # Available languages for translation
 languages = {
@@ -136,7 +136,7 @@ if option == "YouTube Summarizer":
 
             # Translate summary to the selected language
             selected_language = st.sidebar.selectbox("Select language for translation:", list(languages.keys()))
-            translated_summary = translate_text(full_summary, languages[selected_language])
+            translated_summary = translator.translate(full_summary, dest=languages[selected_language]).text
 
             # Display translated summary
             st.write(f"Translated Summary in {selected_language}:")
@@ -192,27 +192,25 @@ elif option == "Chatbot":
             st.write("ChatGPT: " + chatgpt_response)
 
 elif option == "Image to Text":
-    st.header("ImagetxtSummarizer")
+    st.header("Image to Text")
 
-    uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+    uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
     if uploaded_file is not None:
-        # Open the image and extract text
+        # Convert the uploaded image to text
         image = Image.open(uploaded_file)
-        extracted_text = extract_text_from_image(image)
+        extracted_text = image_to_text(image)
         
         # Display the extracted text
         st.write("Extracted Text:")
         st.write(extracted_text)
 
-        # Summarize extracted text if not empty
-        if extracted_text:
-            summarizer = pipeline("summarization")
-            summaries = summarizer(extracted_text, max_length=150, min_length=50, do_sample=False)
-            summary_text = summaries[0]['summary_text']
+        # Optionally, translate the extracted text
+        selected_language = st.selectbox("Select language for translation:", list(languages.keys()))
+        if st.button("Translate"):
+            translated_text = translate_text(extracted_text, languages[selected_language])
+            st.write(f"Translated Text in {selected_language}:")
+            st.write(translated_text)
 
-            st.write("Summary of Extracted Text:")
-            st.write(summary_text)
-
-            # Speak the summarized text
-            if st.button("Listen to Summary"):
-                speak_text(summary_text)
+            # Speak the translated text
+            if st.button("Listen to Translated Text"):
+                speak_text(translated_text)
