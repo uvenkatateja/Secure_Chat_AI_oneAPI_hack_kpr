@@ -1,4 +1,4 @@
-
+        
 import http.client
 import streamlit as st
 from youtube_transcript_api import YouTubeTranscriptApi
@@ -11,6 +11,16 @@ import pyttsx3
 # Set up the translator and text-to-speech engine
 translator = Translator()
 tts_engine = pyttsx3.init()
+
+# Violations list with keywords, descriptions, and risk levels
+violations = [
+    {"keywords": ["harm", "hurt", "kill", "abuse", "violence"], "description": "Harmful content", "risk_level": 5},
+    {"keywords": ["age", "disability", "manipulate", "exploit"], "description": "Exploiting vulnerabilities (age, disability)", "risk_level": 4},
+    {"keywords": ["subliminal", "manipulative"], "description": "Subliminal techniques to impair decision-making", "risk_level": 3},
+    {"keywords": ["threat", "intimidation"], "description": "Threatening behavior", "risk_level": 4},
+    {"keywords": ["racism", "sexism", "discrimination"], "description": "Discriminatory language", "risk_level": 4},
+    {"keywords": ["assault", "harassment", "abduction"], "description": "Harassment or assault", "risk_level": 5},
+]
 
 # Function to extract video ID from link
 def extract_video_id(link):
@@ -28,7 +38,7 @@ def get_chatgpt_response(message):
     conn = http.client.HTTPSConnection("chatgpt-42.p.rapidapi.com")
     payload = json.dumps({"messages": [{"role": "user", "content": message}], "web_access": False})
     headers = {
-        'x-rapidapi-key': "b3f00fe5cemshc7eaab2ade19a85p12e03bjsnc5a15b5ce04b",
+        'x-rapidapi-key': "your_rapidapi_key_here",
         'x-rapidapi-host': "chatgpt-42.p.rapidapi.com",
         'Content-Type': "application/json"
     }
@@ -64,6 +74,13 @@ def chunk_text(text, max_length=1024):
     words = text.split()
     for i in range(0, len(words), max_length):
         yield ' '.join(words[i:i+max_length])
+
+# Function to check for violations in a message
+def check_for_violations(message):
+    for violation in violations:
+        if any(keyword in message.lower() for keyword in violation["keywords"]):
+            return violation
+    return None
 
 # Available languages for translation
 languages = {
@@ -143,9 +160,26 @@ elif option == "Chatbot":
 
     message = st.text_input("You : ")
     if st.button("Send"):
-        response = get_chatgpt_response(message)
-        response_json = json.loads(response)
-        chatgpt_response = response_json.get("result", "No response from ChatGPT.")
-        st.write("ChatGPT: " + chatgpt_response)
-
+        # Check if the message contains inappropriate content
+        violation = check_for_violations(message)
         
+        if violation:
+            # Display a red warning symbol and message
+            st.markdown(
+                f"""
+                <div style="background-color:#ffcccb; padding: 10px; border-radius: 5px;">
+                    <span style="color:red; font-size:24px; font-weight:bold;">⚠️</span>
+                    <span style="color:red; font-size:18px; font-weight:bold;"> **Warning**: {violation['description']} detected.</span>
+                    <br>
+                    <span style="color:red;">Risk Level: {violation['risk_level']}</span>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            st.write("Next chat interaction is blocked due to violation.")
+        else:
+            # Proceed with getting ChatGPT response
+            response = get_chatgpt_response(message)
+            response_json = json.loads(response)
+            chatgpt_response = response_json.get("result", "No response from ChatGPT.")
+            st.write("ChatGPT: " + chatgpt_response)
