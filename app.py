@@ -1,4 +1,4 @@
-        
+
 import http.client
 import streamlit as st
 from youtube_transcript_api import YouTubeTranscriptApi
@@ -7,6 +7,8 @@ from fpdf import FPDF
 from googletrans import Translator
 import json
 import pyttsx3
+from PIL import Image
+import pytesseract  # Make sure to install pytesseract
 
 # Set up the translator and text-to-speech engine
 translator = Translator()
@@ -27,7 +29,7 @@ def extract_video_id(link):
     try:
         if not link or "v=" not in link:
             return None
-        video_id = link.split("v=")[1]
+        video_id = link.split("v=")[1].split("&")[0]  # Handle extra params
         return video_id if video_id else None
     except Exception as e:
         print(f"Error extracting video ID: {str(e)}")
@@ -57,7 +59,7 @@ def generate_pdf(summary_text):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
-    pdf.cell(200, 10, txt="YouTube Video Summary", ln=True, align="C")
+    pdf.cell(200, 10, txt="Summary", ln=True, align="C")
     pdf.multi_cell(0, 10, summary_text)
     pdf_file = "summary.pdf"
     pdf.output(pdf_file)
@@ -73,7 +75,7 @@ def speak_text(text):
 def chunk_text(text, max_length=1024):
     words = text.split()
     for i in range(0, len(words), max_length):
-        yield ' '.join(words[i:i+max_length])
+        yield ' '.join(words[i:i + max_length])
 
 # Function to check for violations in a message
 def check_for_violations(message):
@@ -81,6 +83,11 @@ def check_for_violations(message):
         if any(keyword in message.lower() for keyword in violation["keywords"]):
             return violation
     return None
+
+# Function to extract text from image
+def extract_text_from_image(image):
+    text = pytesseract.image_to_string(image)
+    return text
 
 # Available languages for translation
 languages = {
@@ -97,7 +104,7 @@ st.title("Video Summarizer.ai & Chatbot")
 
 # Add sidebar for navigation
 st.sidebar.title("Navigation")
-option = st.sidebar.radio("Choose a feature:", ("YouTube Summarizer", "Chatbot"))
+option = st.sidebar.radio("Choose a feature:", ("YouTube Summarizer", "Chatbot", "Image to Text"))
 
 if option == "YouTube Summarizer":
     st.header("Video Summarizer.ai")
@@ -129,7 +136,7 @@ if option == "YouTube Summarizer":
 
             # Translate summary to the selected language
             selected_language = st.sidebar.selectbox("Select language for translation:", list(languages.keys()))
-            translated_summary = translator.translate(full_summary, dest=languages[selected_language]).text
+            translated_summary = translate_text(full_summary, languages[selected_language])
 
             # Display translated summary
             st.write(f"Translated Summary in {selected_language}:")
@@ -183,3 +190,29 @@ elif option == "Chatbot":
             response_json = json.loads(response)
             chatgpt_response = response_json.get("result", "No response from ChatGPT.")
             st.write("ChatGPT: " + chatgpt_response)
+
+elif option == "Image to Text":
+    st.header("ImagetxtSummarizer")
+
+    uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+    if uploaded_file is not None:
+        # Open the image and extract text
+        image = Image.open(uploaded_file)
+        extracted_text = extract_text_from_image(image)
+        
+        # Display the extracted text
+        st.write("Extracted Text:")
+        st.write(extracted_text)
+
+        # Summarize extracted text if not empty
+        if extracted_text:
+            summarizer = pipeline("summarization")
+            summaries = summarizer(extracted_text, max_length=150, min_length=50, do_sample=False)
+            summary_text = summaries[0]['summary_text']
+
+            st.write("Summary of Extracted Text:")
+            st.write(summary_text)
+
+            # Speak the summarized text
+            if st.button("Listen to Summary"):
+                speak_text(summary_text)
