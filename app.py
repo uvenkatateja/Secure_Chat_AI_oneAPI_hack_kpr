@@ -76,17 +76,17 @@ languages = {
 }
 
 # Set up Streamlit app
-st.title("YouTube Video Summarizer & Chatbot")
+st.title("Video Summarizer.ai & Chatbot")
 
 # Add sidebar for navigation
 st.sidebar.title("Navigation")
 option = st.sidebar.radio("Choose a feature:", ("YouTube Summarizer", "Chatbot"))
 
 if option == "YouTube Summarizer":
-    st.header("YouTube Video Summarizer")
+    st.header("Video Summarizer.ai")
 
     # Sidebar text input for YouTube video link
-    youtube_link = st.sidebar.text_input("Enter YouTube video link:")
+    youtube_link = st.sidebar.text_input("Enter video link:")
 
     # Main content logic for summarization
     video_id = extract_video_id(youtube_link)
@@ -136,7 +136,7 @@ if option == "YouTube Summarizer":
             print(f"Error summarizing video: {str(e)}")
             st.write("Error summarizing video. Please check the video link and try again.")
     else:
-        st.write("Please enter a valid YouTube video link in the sidebar.")
+        st.write("Please enter a valid video link in the sidebar.")
 
 elif option == "Chatbot":
     st.header("Chatbot")
